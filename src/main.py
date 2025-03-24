@@ -23,7 +23,9 @@ def whats_new(session):
     soup = BeautifulSoup(response.text, features="lxml")
     main_div = find_tag(soup, "section", attrs={"id": "what-s-new-in-python"})
     div_with_ul = find_tag(main_div, "div", attrs={"class": "toctree-wrapper"})
-    sections_by_python = div_with_ul.find_all("li", attrs={"class": "toctree-l1"})
+    sections_by_python = div_with_ul.find_all(
+        "li", attrs={"class": "toctree-l1"}
+    )
     results = [("Ссылка на статью", "Заголовок", "Редактор, автор")]
     for section in tqdm(sections_by_python):
         version_a_tag = section.find("a")
@@ -110,7 +112,9 @@ def pep(session):
                 {"class": "rfc2822 field-list simple"},
             )
             status_page = (
-                table.find(string="Status").parent.find_next_sibling("dd").string
+                table.find(
+                    string="Status").parent.find_next_sibling(
+                        "dd").string
             )
             status_sums[status_page] += 1
             if status_page not in EXPECTED_STATUS[status_preview]:

@@ -13,7 +13,7 @@ def get_response(session, url):
         return response
     except RequestException:
         logging.exception(
-            logging.exception(Texts.RESPONSE_ERROR.format(url,stack_info=True)) 
+            logging.exception(Texts.RESPONSE_ERROR.format(url, stack_info=True))
         )
 
 

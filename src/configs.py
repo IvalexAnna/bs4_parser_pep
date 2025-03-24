@@ -34,7 +34,10 @@ def configure_logging():
     log_dir = BASE_DIR / "logs"
     log_dir.mkdir(exist_ok=True)
     log_file = log_dir / "parser.log"
-    rotating_handler = RotatingFileHandler(log_file, Texts.MAXBYTES, Texts.BACKUPCONT)
+    rotating_handler = RotatingFileHandler(
+        log_file, Texts.MAXBYTES,
+        Texts.BACKUPCONT
+    )
     logging.basicConfig(
         datefmt=DT_FORMAT,
         format=LOG_FORMAT,
