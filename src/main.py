@@ -1,25 +1,17 @@
-import re
 import logging
-from urllib.parse import urljoin
+import re
 from collections import defaultdict
-import requests_cache
+from urllib.parse import urljoin
 
+import requests_cache
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 
 from configs import configure_argument_parser, configure_logging
-from constants import (
-    BASE_DIR,
-    Dirs,
-    EXPECTED_STATUS,
-    MAIN_DOC_URL,
-    MAIN_PEP_URL,
-    Texts,
-    TQDM_NCOLS,
-    Urls,
-)
+from constants import (BASE_DIR, EXPECTED_STATUS, MAIN_DOC_URL, MAIN_PEP_URL,
+                       TQDM_NCOLS, Texts)
 from outputs import control_output
-from utils import get_response, find_tag, get_soup
+from utils import find_tag, get_response, get_soup
 
 
 def whats_new(session):
@@ -61,7 +53,7 @@ def latest_versions(session):
             a_tags = ul.find_all("a")
             break
     else:
-        raise Exception("Ничего не нашлось")
+        raise Exception(Texts.NOTHING_FOUND)
 
     results = [("Ссылка на документацию", "Версия", "Статус")]
     pattern = r"Python (?P<version>\d\.\d+) \((?P<status>.*)\)"
@@ -93,14 +85,14 @@ def download(session):
     downloads_dir.mkdir(exist_ok=True)
     archive_path = downloads_dir / filename
     response = session.get(archive_url)
-    logging.info(f"Архив был загружен и сохранён: {archive_path}")
+    logging.info(Texts.LOAD_ARCHIVE.format(archive_path))
 
     with open(archive_path, "wb") as file:
         file.write(response.content)
 
 
 def pep(session):
-    soup = get_soup(session, MAIN_PEP_URL)
+    soup = get_soup(session, MAIN_PEP_URL + "/numerical/")
     section_table = find_tag(soup, "section", {"id": "numerical-index"})
     tbody = find_tag(section_table, "tbody")
     pep_list = tbody.find_all("tr")
@@ -144,16 +136,15 @@ MODE_TO_FUNCTION = {
     "download": download,
     "pep": pep,
 }
+
+
 def main():
-    # Запускаем функцию с конфигурацией логов.
     configure_logging()
-    # Отмечаем в логах момент запуска программы.
-    logging.info("Парсер запущен!")
+    logging.info(Texts.START_PARSE)
 
     arg_parser = configure_argument_parser(MODE_TO_FUNCTION.keys())
     args = arg_parser.parse_args()
-    # Логируем переданные аргументы командной строки.
-    logging.info(f"Аргументы командной строки: {args}")
+    logging.info(Texts.COMMAND_ARGS.format(args))
 
     session = requests_cache.CachedSession()
     if args.clear_cache:
@@ -164,8 +155,7 @@ def main():
 
     if results is not None:
         control_output(results, args)
-    # Логируем завершение работы парсера.
-    logging.info("Парсер завершил работу.")
+    logging.info(Texts.FINISH_PARSE)
 
 
 if __name__ == "__main__":

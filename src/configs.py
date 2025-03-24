@@ -2,52 +2,42 @@ import argparse
 import logging
 from logging.handlers import RotatingFileHandler
 
-from constants import BASE_DIR
+from constants import BASE_DIR, Texts
 
 LOG_FORMAT = '"%(asctime)s - [%(levelname)s] - %(message)s"'
-DT_FORMAT = '%d.%m.%Y %H:%M:%S'
+DT_FORMAT = "%d.%m.%Y %H:%M:%S"
+
 
 def configure_argument_parser(available_modes):
-    parser = argparse.ArgumentParser(description='Парсер документации Python')
+    parser = argparse.ArgumentParser(description=Texts.PARSER_DESCRIPTION)
     parser.add_argument(
         'mode',
         choices=available_modes,
-        help='Режимы работы парсера'
+        help=Texts.PARSER_MODE
     )
     parser.add_argument(
         '-c',
         '--clear-cache',
         action='store_true',
-        help='Очистка кеша'
+        help=Texts.PARSER_CACHE_CLEAN
     )
-    # Новый аргумент --output вместо аргумента --pretty
     parser.add_argument(
-        '-o',
-        '--output',
-        choices=('pretty', 'file'),
-        help='Дополнительные способы вывода данных'
+        "-o",
+        "--output",
+        choices=("pretty", "file"),
+        help=Texts.PARSER_OUTPUTS
     )
     return parser
 
+
 def configure_logging():
-    log_dir = BASE_DIR / 'logs'
+    log_dir = BASE_DIR / "logs"
     log_dir.mkdir(exist_ok=True)
-    # Отсюда начинается новый код!
-    # Получение абсолютного пути до файла с логами.
-    log_file = log_dir / 'parser.log'
-    
-    # Инициализация хендлера с ротацией логов.
-    # Максимальный объём одного файла — десять в шестой степени байт (10**6), 
-    # максимальное количество файлов с логами — 5.
-    rotating_handler = RotatingFileHandler(
-        log_file, maxBytes=10 ** 6, backupCount=5
-    )
-    # Базовая настройка логирования basicConfig.
+    log_file = log_dir / "parser.log"
+    rotating_handler = RotatingFileHandler(log_file, Texts.MAXBYTES, Texts.BACKUPCONT)
     logging.basicConfig(
         datefmt=DT_FORMAT,
         format=LOG_FORMAT,
-        # Уровень записи логов.
         level=logging.INFO,
-        # Вывод логов в терминал.
-        handlers=(rotating_handler, logging.StreamHandler())
+        handlers=(rotating_handler, logging.StreamHandler()),
     )
