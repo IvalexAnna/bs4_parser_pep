@@ -103,16 +103,16 @@ def pep(session):
         logging.error(Texts.ERROR_WHEN_RUN.format(url))
         return
     soup = BeautifulSoup(response.text, features="lxml")
-    section_table = find_tag(soup, "section", {"id": "numerical-index"}) 
-    tbody = find_tag(section_table, "tbody") 
-    pep_list = tbody.find_all("tr") 
-    status_sums = defaultdict(int) 
-    errors = [] 
-    warnings = [] 
-    for pep in tqdm(pep_list, desc=Texts.TQDM_DESCRIPTION, ncols=TQDM_NCOLS): 
-        status_preview = find_tag(pep, "abbr").text 
-        status_preview = status_preview[1:] if len(status_preview) > 1 else "" 
-        pep_link = urljoin(MAIN_PEP_URL, find_tag(pep, "a")["href"]) 
+    section_table = find_tag(soup, "section", {"id": "numerical-index"})
+    tbody = find_tag(section_table, "tbody")
+    pep_list = tbody.find_all("tr")
+    status_sums = defaultdict(int)
+    errors = []
+    warnings = []
+    for pep in tqdm(pep_list, desc=Texts.TQDM_DESCRIPTION, ncols=TQDM_NCOLS):
+        status_preview = find_tag(pep, "abbr").text
+        status_preview = status_preview[1:] if len(status_preview) > 1 else ""
+        pep_link = urljoin(MAIN_PEP_URL, find_tag(pep, "a")["href"])
         try:
             url = pep_link
             response = get_response(session, url)
@@ -124,27 +124,27 @@ def pep(session):
             table = find_tag(
                 inner_soup,
                 "dl",
-                {"class": "rfc2822 field-list simple"}, 
-            ) 
+                {"class": "rfc2822 field-list simple"},
+            )
             status_page = find_tag(table, '',
                                    string='Status').parent.find_next_sibling('dd').text
-            status_sums[status_page] += 1 
-            if status_page not in EXPECTED_STATUS[status_preview]: 
-                warnings.append( 
-                    Texts.STATUS_NOT_MATCH.format( 
-                        pep_link, status_page, EXPECTED_STATUS[status_preview] 
-                    ) 
-                ) 
-        except ConnectionError as error: 
-            errors.append(Texts.RESPONSE_ERROR.format(pep_link, error)) 
-    
+            status_sums[status_page] += 1
+            if status_page not in EXPECTED_STATUS[status_preview]:
+                warnings.append(
+                    Texts.STATUS_NOT_MATCH.format(
+                        pep_link, status_page, EXPECTED_STATUS[status_preview]
+                    )
+                )
+        except ConnectionError as error:
+            errors.append(Texts.RESPONSE_ERROR.format(pep_link, error))
+
     [logging.error(error) for error in errors]
     [logging.warning(warning) for warning in warnings]
     
-    return [ 
-        ("Статус", "Количество"), 
-        *status_sums.items(), 
-        ("Всего", sum(status_sums.values())), 
+    return [
+        ("Статус", "Количество"),
+        *status_sums.items(),
+        ("Всего", sum(status_sums.values())),
     ]
 
 
