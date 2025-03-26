@@ -120,14 +120,15 @@ def pep(session):
                 logging.error(Texts.ERROR_WHEN_RUN.format(url))
                 return
             inner_soup = BeautifulSoup(response.text, features="lxml")
-            
+
             table = find_tag(
                 inner_soup,
                 "dl",
                 {"class": "rfc2822 field-list simple"},
             )
             status_page = find_tag(table, '',
-                                   string='Status').parent.find_next_sibling('dd').text
+                                   string='Status'
+                                   ).parent.find_next_sibling('dd').text
             status_sums[status_page] += 1
             if status_page not in EXPECTED_STATUS[status_preview]:
                 warnings.append(
@@ -137,10 +138,8 @@ def pep(session):
                 )
         except ConnectionError as error:
             errors.append(Texts.RESPONSE_ERROR.format(pep_link, error))
-
     [logging.error(error) for error in errors]
     [logging.warning(warning) for warning in warnings]
-    
     return [
         ("Статус", "Количество"),
         *status_sums.items(),
