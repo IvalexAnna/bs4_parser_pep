@@ -11,7 +11,7 @@ from configs import configure_argument_parser, configure_logging
 from constants import (BASE_DIR, EXPECTED_STATUS, MAIN_DOC_URL, MAIN_PEP_URL,
                        TQDM_NCOLS, Texts)
 from outputs import control_output
-from utils import find_tag, get_response, get_soup
+from utils import find_tag, get_response
 
 
 def whats_new(session):
@@ -28,7 +28,7 @@ def whats_new(session):
     )
     results = [("Ссылка на статью", "Заголовок", "Редактор, автор")]
     for section in tqdm(sections_by_python):
-        version_a_tag = section.find("a")
+        version_a_tag = find_tag(section, "a")
         href = version_a_tag["href"]
         version_link = urljoin(whats_new_url, href)
         response = get_response(session, version_link)
@@ -48,7 +48,7 @@ def latest_versions(session):
     if response is None:
         return
     soup = BeautifulSoup(response.text, features="lxml")
-    sidebar = soup.find("div", {"class": "sphinxsidebarwrapper"})
+    sidebar = find_tag(soup, "div", {"class": "sphinxsidebarwrapper"})
     ul_tags = sidebar.find_all("ul")
     for ul in ul_tags:
         if "All versions" in ul.text:
@@ -86,7 +86,10 @@ def download(session):
     downloads_dir = BASE_DIR / "downloads"
     downloads_dir.mkdir(exist_ok=True)
     archive_path = downloads_dir / filename
-    response = session.get(archive_url)
+    response = get_response(session, archive_url)
+    if response is None:
+        logging.error(Texts.ERROR_WHEN_RUN.format(archive_path))
+        return
     logging.info(Texts.LOAD_ARCHIVE.format(archive_path))
 
     with open(archive_path, "wb") as file:
@@ -94,43 +97,54 @@ def download(session):
 
 
 def pep(session):
-    soup = get_soup(session, MAIN_PEP_URL + "/numerical/")
-    section_table = find_tag(soup, "section", {"id": "numerical-index"})
-    tbody = find_tag(section_table, "tbody")
-    pep_list = tbody.find_all("tr")
-    status_sums = defaultdict(int)
-    errors = []
-    warnings = []
-    for pep in tqdm(pep_list, desc=Texts.TQDM_DESCRIPTION, ncols=TQDM_NCOLS):
-        status_preview = pep.find("abbr").text
-        status_preview = status_preview[1:] if len(status_preview) > 1 else ""
-        pep_link = urljoin(MAIN_PEP_URL, pep.find("a")["href"])
+    url = MAIN_PEP_URL + "/numerical/"
+    response = get_response(session, url)
+    if response is None:
+        logging.error(Texts.ERROR_WHEN_RUN.format(url))
+        return
+    soup = BeautifulSoup(response.text, features="lxml")
+    section_table = find_tag(soup, "section", {"id": "numerical-index"}) 
+    tbody = find_tag(section_table, "tbody") 
+    pep_list = tbody.find_all("tr") 
+    status_sums = defaultdict(int) 
+    errors = [] 
+    warnings = [] 
+    for pep in tqdm(pep_list, desc=Texts.TQDM_DESCRIPTION, ncols=TQDM_NCOLS): 
+        status_preview = find_tag(pep, "abbr").text 
+        status_preview = status_preview[1:] if len(status_preview) > 1 else "" 
+        pep_link = urljoin(MAIN_PEP_URL, find_tag(pep, "a")["href"]) 
         try:
+            url = pep_link
+            response = get_response(session, url)
+            if response is None:
+                logging.error(Texts.ERROR_WHEN_RUN.format(url))
+                return
+            inner_soup = BeautifulSoup(response.text, features="lxml")
+            
             table = find_tag(
-                get_soup(session, pep_link),
+                inner_soup,
                 "dl",
-                {"class": "rfc2822 field-list simple"},
-            )
-            status_page = (
-                table.find(
-                    string="Status").parent.find_next_sibling(
-                        "dd").string
-            )
-            status_sums[status_page] += 1
-            if status_page not in EXPECTED_STATUS[status_preview]:
-                warnings.append(
-                    Texts.STATUS_NOT_MATCH.format(
-                        pep_link, status_page, EXPECTED_STATUS[status_preview]
-                    )
-                )
-        except ConnectionError as error:
-            errors.append(Texts.RESPONSE_ERROR.format(pep_link, error))
-    [*map(logging.error, errors)]
-    [*map(logging.warning, warnings)]
-    return [
-        ("Статус", "Количество"),
-        *status_sums.items(),
-        ("Всего", sum(status_sums.values())),
+                {"class": "rfc2822 field-list simple"}, 
+            ) 
+            status_page = find_tag(table, '',
+                                   string='Status').parent.find_next_sibling('dd').text
+            status_sums[status_page] += 1 
+            if status_page not in EXPECTED_STATUS[status_preview]: 
+                warnings.append( 
+                    Texts.STATUS_NOT_MATCH.format( 
+                        pep_link, status_page, EXPECTED_STATUS[status_preview] 
+                    ) 
+                ) 
+        except ConnectionError as error: 
+            errors.append(Texts.RESPONSE_ERROR.format(pep_link, error)) 
+    
+    [logging.error(error) for error in errors]
+    [logging.warning(warning) for warning in warnings]
+    
+    return [ 
+        ("Статус", "Количество"), 
+        *status_sums.items(), 
+        ("Всего", sum(status_sums.values())), 
     ]
 
 
